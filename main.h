@@ -12,7 +12,7 @@
  time_t net_record_time;//入网记录时间
  pthread_t id_client;
  uint8_t my_gw_mac[6];
- 
+ pthread_mutex_t mutex_sign_mac_zt;//标记mac锁
  typedef struct sign_mac
  {
  	uint8_t the_mac[8];

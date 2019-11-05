@@ -13,4 +13,5 @@ void str_to_hex(uint8_t *str_unchar,char *str_char,int len_of_hex);
 int reboot_restart();
 void kill_gateway(void);
 void get_hex_mac(uint8_t *data);
+void read_channel(void);
 #endif

@@ -23,7 +23,9 @@ int main(int argc,char* argv[])
 	struct sigaction sa;
 	sa.sa_handler = SIG_IGN;
 	sigaction( SIGPIPE, &sa, 0 );
-
+	
+	pthread_mutex_init(&mutex_sign_mac_zt,NULL);
+	
 	pthread_t id_usart,id_heart_jump,id_gateway_heart;
 	ret0 = pthread_create(&id_usart,NULL,(void*)pthread_usart_receive,NULL);
 	if(ret0 < 0)
@@ -53,6 +55,7 @@ int main(int argc,char* argv[])
 			sleep(1);
 		}
 	}
+	read_channel();
 	ret2 = pthread_create(&id_heart_jump,NULL,(void*)heart_jump,NULL);
 	if(ret2 < 0)
 		{

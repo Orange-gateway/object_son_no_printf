@@ -10,7 +10,7 @@ void pthread_usart_receive(void)
 	memset(rc_buff,0,10240);
 	
 	while(1)
-	{	
+	{
 		len = read(fd,r_buff,sizeof(r_buff));
 		if(len>0)
 		{
@@ -46,10 +46,10 @@ void pthread_usart_receive(void)
 								uint8_t *my_u_data = NULL;
 								my_u_data =(uint8_t*)malloc(data_len);//解析数据接收缓冲区
 								memset(my_u_data,0,data_len);
-						
+
 								for(i=0;i<data_len;i++)
 									my_u_data[i]=rc_buff[i];
-								
+
 								if(up_sign_mac(my_u_data) == 1)//判断标记的mac的链表中是否和这一帧数据的mac相同，如果相同则发送mac信息给主网关
 								{
 									uint8_t *notice_mac = NULL;
@@ -202,7 +202,6 @@ void pthread_u_send(char *str)
 			}
 		}
 		usart_send(fd,final_cmd,len);
-		
 		free(final_cmd);
 		final_cmd = NULL;
 	}
@@ -256,6 +255,12 @@ void pthread_v_send(uint8_t *u_data)
 	else if(u_data[10] == 0x55)
 	{
 		;
+	}
+	else if(u_data[10] == 0x30)
+	{
+		memcpy(u_data+2,my_gw_mac,6);
+		u_data[10] = 0xf5;
+		send(cd,u_data,u_data_len,0);
 	}
 	else if(NET_FLAG)
 	{
@@ -318,6 +323,7 @@ void sign_mac_zt(uint8_t *mac)
 {
 	SIG_MAC *p = NULL;
 	p = sign_mac_head;
+	pthread_mutex_lock(&mutex_sign_mac_zt);
 	if(p==NULL)
 	{
 		sign_mac_d = (SIG_MAC*)malloc(sizeof(SIG_MAC));
@@ -326,7 +332,6 @@ void sign_mac_zt(uint8_t *mac)
 		sign_mac_d->flag_have = 1;//1代表标记mac
 		sign_mac_head = sign_mac_z = sign_mac_d;
 		sign_mac_d->next = NULL;
-		return ;
 	}
 	else
 	{
@@ -335,7 +340,7 @@ void sign_mac_zt(uint8_t *mac)
 			if(!mac_and_mac_judge(p,mac+2))
 			{
 				p->flag_have = 1;
-				return;
+				break;
 			}
 			else if(p->next == NULL)
 			{
@@ -345,13 +350,12 @@ void sign_mac_zt(uint8_t *mac)
 				sign_mac_d->flag_have = 1;
 				p->next = sign_mac_d;
 				sign_mac_d->next = NULL;
-
-				return ;
+				break;
 			}
 			p = p->next;
-	
 		}
 	}
+	pthread_mutex_unlock(&mutex_sign_mac_zt);
 }
 /*
 @取消mac链表中的标记
@@ -359,8 +363,10 @@ void sign_mac_zt(uint8_t *mac)
 int up_sign_mac(uint8_t *data)
 {
 	int ret = 0;
+	if(data[10] == 0x10) return ret;
 	SIG_MAC *p1 = NULL;
 	p1 = sign_mac_head;
+	pthread_mutex_lock(&mutex_sign_mac_zt);
 	while(p1)
 	{
 		if(!mac_and_mac_judge(p1,data+2))
@@ -374,6 +380,7 @@ int up_sign_mac(uint8_t *data)
 		}
 		p1 = p1->next;
 	}
+	pthread_mutex_unlock(&mutex_sign_mac_zt);
 	return ret;
 }
 int mac_and_mac_judge(SIG_MAC *p,uint8_t *mac)
